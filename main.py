@@ -1,46 +1,67 @@
 import cv2
-from ultralytics import YOLO
+import numpy as np
+import tensorflow as tf
+from utils import resize_frame
 
-def launch_argos():
-    # 1. Chargement du modèle (YOLOv8 Nano - très rapide)
-    # Il va se télécharger automatiquement à la première exécution
-    model = YOLO('yolov8n.pt') 
+# Charger le modèle depuis le disque
+model = tf.saved_model.load("models/ssd_mobilenet_v2")
+print("Modèle chargé depuis le disque !")
 
-    # 2. Initialisation de la capture vidéo (0 = Webcam interne)
+def detect_person(frame):
+    """Détecte les personnes dans une frame"""
+    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img_tensor = tf.convert_to_tensor(img_rgb, dtype=tf.uint8)
+    img_tensor = tf.expand_dims(img_tensor, 0)
+
+    result = model(img_tensor)
+    result = {key: value.numpy() for key, value in result.items()}
+
+    height, width, _ = frame.shape
+    detected = False
+
+    # Applatir arrays pour compatibilité modèle hors ligne
+    detection_classes = result['detection_classes'].squeeze()
+    detection_scores = result['detection_scores'].squeeze()
+    detection_boxes = result['detection_boxes'].squeeze()
+
+    for i in range(len(detection_scores)):
+        score = detection_scores[i]
+        class_id = int(detection_classes[i])
+        if score > 0.5 and class_id == 1:  # 1 = personne
+            ymin, xmin, ymax, xmax = detection_boxes[i]
+            left, right = int(xmin * width), int(xmax * width)
+            top, bottom = int(ymin * height), int(ymax * height)
+            detected = True
+            break  # on s'arrête dès qu'on détecte une personne
+
+    return detected
+
+def main():
+    # Ouvrir la webcam
     cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Impossible d'ouvrir la webcam")
+        return
 
-    print("--- Argos est activé et surveille ---")
-
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
+    print("Appuyez sur 'q' pour quitter.")
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Impossible de lire la frame.")
             break
 
-        # 3. Inférence : Détection avec YOLO
-        # classes=[0] correspond à la classe 'person' dans le dataset COCO
-        results = model(frame, classes=[0], conf=0.5, verbose=False)
+        frame = resize_frame(frame, width=640)
+        detected = detect_person(frame)
 
-        # 4. Analyse des résultats
-        human_detected = False
-        for r in results:
-            if len(r.boxes) > 0:
-                human_detected = True
-                # Dessiner les boîtes de détection sur l'image
-                frame = r.plot() 
-
-        # 5. Gestion de l'alerte
-        if human_detected:
-            cv2.putText(frame, "ALERTE : HUMAIN DETECTE", (50, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-            # Ici, vous pourriez ajouter : winsound.Beep(1000, 500) sous Windows
+        if detected:
+            print("Présence détectée !")
         else:
-            cv2.putText(frame, "Statut: RAS", (50, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            print("Aucune présence")
 
-        # 6. Affichage du flux
-        cv2.imshow("Argos - Systeme de Surveillance", frame)
+        # Afficher la frame si tu veux visualiser (optionnel)
+        cv2.imshow("Webcam", frame)
 
-        # Quitter avec la touche 'q'
+        # Sortir avec la touche 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -48,4 +69,4 @@ def launch_argos():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    launch_argos()
+    main()
