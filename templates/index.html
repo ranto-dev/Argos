@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Argos Security Console</title>
+    <style>
+      body {
+        background: #0f172a;
+        color: white;
+        font-family: "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      .container {
+        margin-top: 30px;
+      }
+      .video-wrapper {
+        background: #1e293b;
+        padding: 15px;
+        border-radius: 12px;
+        display: inline-block;
+        border: 2px solid #334155;
+      }
+      .controls {
+        margin-top: 20px;
+      }
+      button {
+        padding: 15px 30px;
+        border-radius: 8px;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 0 10px;
+      }
+      .btn-on {
+        background: #3b82f6;
+        color: white;
+      }
+      .btn-stop {
+        background: #ef4444;
+        color: white;
+      }
+      #status-text {
+        font-size: 1.2em;
+        color: #94a3b8;
+        margin-bottom: 15px;
+      }
+      .alarm-active {
+        color: #f87171 !important;
+        animation: blink 1s infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🛡️ ARGOS SENTINEL</h1>
+      <div id="status-text">SYSTÈME EN VEILLE</div>
+      <div class="video-wrapper">
+        <img src="/video_feed" width="640" />
+      </div>
+      <div class="controls">
+        <button class="btn-on" onclick="toggle()">ON/OFF SURVEILLANCE</button>
+        <button class="btn-stop" onclick="stopAlarm()">ARRÊTER ALARME</button>
+      </div>
+    </div>
+    <script>
+      async function toggle() {
+        const res = await fetch("/toggle");
+        const data = await res.json();
+        const st = document.getElementById("status-text");
+        st.innerText =
+          data.status === "active"
+            ? "⚠️ SURVEILLANCE ACTIVE"
+            : "SYSTÈME EN VEILLE";
+        st.style.color = data.status === "active" ? "#4ade80" : "#94a3b8";
+      }
+      async function stopAlarm() {
+        await fetch("/stop_alarm");
+      }
+    </script>
+  </body>
+</html>
