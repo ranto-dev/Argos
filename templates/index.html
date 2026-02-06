@@ -2,85 +2,329 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <title>Argos Security Console</title>
+    <title>ARGOS SENTINEL | Command Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+      :root {
+        --primary: #3b82f6;
+        --danger: #ef4444;
+        --success: #10b981;
+        --bg: #020617;
+        --card: rgba(30, 41, 59, 0.6);
+      }
+
       body {
-        background: #0f172a;
-        color: white;
+        margin: 0;
+        overflow: hidden;
         font-family: "Segoe UI", sans-serif;
-        text-align: center;
+        background: var(--bg);
+        color: white;
       }
-      .container {
-        margin-top: 30px;
+
+      #bg-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: -1;
       }
-      .video-wrapper {
-        background: #1e293b;
-        padding: 15px;
-        border-radius: 12px;
-        display: inline-block;
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 25px;
+        padding: 30px;
+        height: 95vh;
+        box-sizing: border-box;
+      }
+
+      .header {
+        grid-column: span 2;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+        padding-bottom: 10px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 3px;
+        color: var(--primary);
+      }
+
+      /* Vidéo */
+      .video-container {
+        background: var(--card);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+
+      .video-container img {
+        width: 90%;
+        border-radius: 10px;
         border: 2px solid #334155;
       }
-      .controls {
-        margin-top: 20px;
+
+      /* Sidebar */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
       }
-      button {
-        padding: 15px 30px;
-        border-radius: 8px;
+      .card {
+        background: var(--card);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+      }
+
+      /* Logs */
+      .console {
+        flex-grow: 1;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 10px;
+        padding: 15px;
+        font-family: "Consolas", monospace;
+        font-size: 0.85rem;
+        overflow-y: auto;
+        text-align: left;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+      }
+
+      .log-line {
+        margin-bottom: 8px;
+        padding-left: 10px;
+        border-left: 2px solid var(--primary);
+        animation: fadeIn 0.4s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* Boutons */
+      .btn {
+        width: 100%;
+        padding: 14px;
+        margin-bottom: 12px;
         border: none;
+        border-radius: 8px;
         font-weight: bold;
         cursor: pointer;
-        margin: 0 10px;
+        transition: 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
       }
-      .btn-on {
-        background: #3b82f6;
+
+      .btn-toggle {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+      }
+      .btn-toggle:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.2);
+      }
+      .btn-danger {
+        background: transparent;
+        border: 1px solid var(--danger);
+        color: var(--danger);
+      }
+      .btn-danger:hover {
+        background: var(--danger);
         color: white;
       }
-      .btn-stop {
-        background: #ef4444;
-        color: white;
+
+      .status-badge {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        font-weight: bold;
+        margin-bottom: 20px;
       }
-      #status-text {
-        font-size: 1.2em;
-        color: #94a3b8;
-        margin-bottom: 15px;
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #64748b;
+        margin-right: 12px;
       }
-      .alarm-active {
-        color: #f87171 !important;
-        animation: blink 1s infinite;
+      .dot-active {
+        background: var(--success);
+        box-shadow: 0 0 10px var(--success);
+        animation: pulse 1.5s infinite;
       }
-      @keyframes blink {
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
         50% {
-          opacity: 0.5;
+          opacity: 0.4;
+        }
+        100% {
+          opacity: 1;
         }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>🛡️ ARGOS SENTINEL</h1>
-      <div id="status-text">SYSTÈME EN VEILLE</div>
-      <div class="video-wrapper">
-        <img src="/video_feed" width="640" />
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="dashboard">
+      <div class="header">
+        <h1>🛡️ ARGOS <span style="color: white">SENTINEL</span></h1>
       </div>
-      <div class="controls">
-        <button class="btn-on" onclick="toggle()">ON/OFF SURVEILLANCE</button>
-        <button class="btn-stop" onclick="stopAlarm()">ARRÊTER ALARME</button>
+
+      <div class="video-container">
+        <img src="/video_feed" id="feed" />
+      </div>
+
+      <div class="sidebar">
+        <div class="card">
+          <div class="status-badge">
+            <div id="status-dot" class="dot"></div>
+            <span id="status-text">SYSTÈME EN VEILLE</span>
+          </div>
+          <button class="btn btn-toggle" onclick="toggleSystem()">
+            Activation / Pause
+          </button>
+          <button class="btn btn-danger" onclick="stopAlarm()">
+            Arrêter Alarme
+          </button>
+        </div>
+
+        <div
+          class="card"
+          style="flex-grow: 1; display: flex; flex-direction: column"
+        >
+          <h3
+            style="
+              margin-top: 0;
+              font-size: 0.8rem;
+              letter-spacing: 1px;
+              color: #94a3b8;
+            "
+          >
+            HISTORIQUE DES ÉVÉNEMENTS
+          </h3>
+          <div id="console" class="console"></div>
+        </div>
       </div>
     </div>
+
     <script>
-      async function toggle() {
+      // --- ANIMATION THREE.JS (Fond Spatial) ---
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      );
+      const renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById("bg-canvas"),
+        alpha: true,
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const starsGeometry = new THREE.BufferGeometry();
+      const starsVertices = [];
+      for (let i = 0; i < 6000; i++) {
+        starsVertices.push(
+          (Math.random() - 0.5) * 2000,
+          (Math.random() - 0.5) * 2000,
+          (Math.random() - 0.5) * 2000,
+        );
+      }
+      starsGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(starsVertices, 3),
+      );
+      const starsMaterial = new THREE.PointsMaterial({
+        color: 0x3b82f6,
+        size: 1.5,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const starField = new THREE.Points(starsGeometry, starsMaterial);
+      scene.add(starField);
+      camera.position.z = 1;
+
+      function animate() {
+        requestAnimationFrame(animate);
+        starField.rotation.y += 0.0005;
+        starField.rotation.x += 0.0002;
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // --- LOGIQUE SYSTÈME ---
+      let lastLoggedEvent = "";
+
+      function addLog(msg) {
+        const consoleBox = document.getElementById("console");
+        const div = document.createElement("div");
+        div.className = "log-line";
+        const time = new Date().toLocaleTimeString();
+
+        if (msg.includes("INTRUSION")) div.style.borderColor = "var(--danger)";
+        if (msg.includes("activée")) div.style.borderColor = "var(--success)";
+
+        div.innerHTML = `<span style="color:#64748b">[${time}]</span> ${msg}`;
+        consoleBox.prepend(div);
+      }
+
+      async function toggleSystem() {
         const res = await fetch("/toggle");
         const data = await res.json();
-        const st = document.getElementById("status-text");
-        st.innerText =
-          data.status === "active"
-            ? "⚠️ SURVEILLANCE ACTIVE"
-            : "SYSTÈME EN VEILLE";
-        st.style.color = data.status === "active" ? "#4ade80" : "#94a3b8";
+        const dot = document.getElementById("status-dot");
+        const text = document.getElementById("status-text");
+
+        if (data.status === "active") {
+          dot.classList.add("dot-active");
+          text.innerText = "SURVEILLANCE ACTIVE";
+          text.style.color = "var(--success)";
+        } else {
+          dot.classList.remove("dot-active");
+          text.innerText = "SYSTÈME EN VEILLE";
+          text.style.color = "white";
+        }
       }
+
       async function stopAlarm() {
         await fetch("/stop_alarm");
       }
+
+      // --- LONG POLLING DES LOGS ---
+      setInterval(async () => {
+        try {
+          const res = await fetch("/get_logs");
+          const data = await res.json();
+          if (data.event !== lastLoggedEvent) {
+            addLog(data.event);
+            lastLoggedEvent = data.event;
+          }
+        } catch (e) {}
+      }, 1000);
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
     </script>
   </body>
 </html>
