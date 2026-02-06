@@ -1,4 +1,3 @@
-# utils.py
 import cv2
 
 def resize_frame(frame, width=None, height=None):
