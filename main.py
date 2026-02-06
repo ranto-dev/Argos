@@ -28,6 +28,7 @@ def get_frames():
         if not success:
             break
         
+        # On force une taille standard pour la fluidité
         frame = cv2.resize(frame, (640, 480))
         
         if monitoring_active:
@@ -40,11 +41,10 @@ def get_frames():
             else:
                 display_frame = frame
         else:
-            # Mode veille : noir et blanc partiel pour économiser du CPU visuel
-            display_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            display_frame = cv2.cvtColor(display_frame, cv2.COLOR_GRAY2BGR)
-            cv2.putText(display_frame, "STANDBY MODE", (200, 240), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            # ON GARDE LA COULEUR MÊME EN VEILLE
+            display_frame = frame
+            cv2.putText(display_frame, "STANDBY", (20, 40), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
         _, buffer = cv2.imencode('.jpg', display_frame)
         yield (b'--frame\r\n'
