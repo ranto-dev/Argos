@@ -9,4 +9,4 @@ SCORE_THRESHOLD = 0.5
 # Configuration Email
 EMAIL_SENDER = "rantoandrianandraina@gmail.com"
 EMAIL_PASSWORD = "sejwosjexpsiabdf"
-EMAIL_RECEIVER = "rguypatrickroland@gmail.com"
+EMAIL_RECEIVER = "fanomezantsojohns@gmail.com"
